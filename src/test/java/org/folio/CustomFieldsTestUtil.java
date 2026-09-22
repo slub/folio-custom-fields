@@ -6,6 +6,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 
 import static org.folio.repository.CustomFieldsConstants.CUSTOM_FIELDS_TABLE;
+import static org.folio.repository.CustomFieldsConstants.CUSTOM_FIELD_SECTIONS_TABLE;
 import static org.folio.test.util.DBTestUtil.deleteFromTable;
 import static org.folio.test.util.DBTestUtil.getAll;
 import static org.folio.test.util.TestUtil.readFile;
@@ -33,6 +34,7 @@ public class CustomFieldsTestUtil {
 
   public static final String STUB_FIELD_ID = "11111111-1111-1111-a111-111111111111";
   public static final String CUSTOM_FIELDS_PATH = "/custom-fields";
+  public static final String CUSTOM_FIELD_SECTIONS_PATH = "/custom-field-sections";
   public static final String USERS_PATH = "/users";
 
   private CustomFieldsTestUtil() {
@@ -40,6 +42,10 @@ public class CustomFieldsTestUtil {
 
   public static void deleteAllCustomFields(Vertx vertx) {
     deleteFromTable(vertx, CUSTOM_FIELDS_TABLE);
+  }
+
+  public static void deleteAllCustomFieldSections(Vertx vertx) {
+    deleteFromTable(vertx, CUSTOM_FIELD_SECTIONS_TABLE);
   }
 
   public static List<CustomField> getAllCustomFields(Vertx vertx) {
@@ -83,6 +89,10 @@ public class CustomFieldsTestUtil {
 
   public static String itemResourcePath(String id) {
     return CUSTOM_FIELDS_PATH + "/" + id;
+  }
+
+  public static String sectionResourcePath(String id) {
+    return CUSTOM_FIELD_SECTIONS_PATH + "/" + id;
   }
 
   public static String itemStatResourcePath(String id) {

@@ -18,7 +18,8 @@ final class AllowedFieldsConstants {
     "order",
     "helpText",
     "metadata",
-    "displayInAccordion"
+    "displayInAccordion",
+    "sectionId"
   );
 
   static final Set<String> CHECKBOX_ALLOWED_FIELDS = new ImmutableSet.Builder<String>()

@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "description": "Custom field section, groups custom fields of one entity type",
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique generated identifier for the custom field section",
+      "$ref": "raml-util/schemas/uuid.schema",
+      "example": "8f8b5a6e-1c3d-4c3e-9d3a-0b0b3a1f6c11"
+    },
+    "name": {
+      "type": "string",
+      "description": "The name of the custom field section, unique per entity type (case-insensitive)",
+      "example": "Vendor information"
+    },
+    "entityType": {
+      "type": "string",
+      "description": "The entity type, the custom field section is assigned to",
+      "example": "package"
+    }
+  },
+  "required": [
+    "name",
+    "entityType"
+  ]
+}

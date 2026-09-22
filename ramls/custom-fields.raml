@@ -9,7 +9,8 @@ documentation:
   - title: folio-custom-fields, a library and common interface for custom fields to be used by several modules
     content: |
       FOLIO module library to store and maintain custom fields using Okapi's multiple interfaces feature.
-      All modules that use this library share the CRUD interface POST/PUT/GET/DELETE on /custom-fields and /custom-fields/$id endpoints.
+      All modules that use this library share the CRUD interface POST/PUT/GET/DELETE on /custom-fields and /custom-fields/$id endpoints,
+      and on /custom-field-sections and /custom-field-sections/$id endpoints.
       The client must set the X-Okapi-Module-Id header, for details see
       [Okapi multiples interfaces documentation](https://github.com/folio-org/okapi/blob/master/doc/guide.md#multiple-interfaces),
       [folio-custom-fields introduction](https://github.com/folio-org/folio-custom-fields#introduction), and
@@ -21,6 +22,8 @@ types:
   customField: !include customField.json
   customFieldStatistic: !include customFieldStatistic.json
   customFieldOptionStatistic: !include customFieldOptionStatistic.json
+  customFieldSection: !include customFieldSection.json
+  customFieldSectionCollection: !include customFieldSectionCollection.json
   errors: !include raml-util/schemas/errors.schema
 
 traits:
@@ -34,7 +37,7 @@ traits:
         example: mod-users-19.0.0
         required: true
         description: |
-          The Okapi Module-Id, must be set by the client because all modules that use this library share the CRUD interface POST/PUT/GET/DELETE on /custom-fields and /custom-fields/$id endpoints with Okapi's multiple interfaces feature.
+          The Okapi Module-Id, must be set by the client because all modules that use this library share the CRUD interface POST/PUT/GET/DELETE on /custom-fields, /custom-fields/$id, /custom-field-sections and /custom-field-sections/$id endpoints with Okapi's multiple interfaces feature.
           For details see
           [Okapi multiples interfaces documentation](https://github.com/folio-org/okapi/blob/master/doc/guide.md#multiple-interfaces),
           [folio-custom-fields introduction](https://github.com/folio-org/folio-custom-fields#introduction), and
@@ -156,3 +159,59 @@ resourceTypes:
               text/plain:
                 example: "Internal server error, contact administrator"
 
+/custom-field-sections:
+  displayName: Custom Field Sections
+  description: Sections group the custom fields of one entity type
+  type:
+    collection:
+      schemaCollection: customFieldSectionCollection
+      schemaItem: customFieldSection
+      exampleCollection: !include examples/customFieldSectionCollection.sample
+      exampleItem: !include examples/customFieldSection.sample
+  is: [ xOkapiModuleId ]
+  post:
+    is: [ validate ]
+  get:
+    is: [
+      searchable: {description: "Query should contain custom field section attributes", example: "entityType==package"},
+      pageable,
+      validate
+    ]
+  /{id}:
+    displayName: Custom Field Section
+    description: Get, Delete or Update a custom field section
+    is: [ xOkapiModuleId ]
+    uriParameters:
+      id:
+        pattern : "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+    type:
+      collection-item:
+        schema: customFieldSection
+        exampleItem: !include examples/customFieldSection.sample
+    put:
+      is: [ validate ]
+      responses:
+        422:
+          description: |
+            Validation error, e.g. duplicate name for the entity type, or the entityType is changed while
+            custom fields are assigned to the section (code sectionInUse)
+          body:
+            application/json:
+              type: errors
+              example:
+                strict: false
+                value: !include examples/sectionInUseErrors.sample
+    delete:
+      description: |
+        Delete the custom field section. A section that is still assigned to at least one custom field cannot be deleted:
+        the response is 422 with code sectionInUse and lists the assigned custom fields (key = field id, value = field name).
+        Move or unassign these custom fields first, then delete the section.
+      responses:
+        422:
+          description: "The section is still assigned to custom fields (code sectionInUse)"
+          body:
+            application/json:
+              type: errors
+              example:
+                strict: false
+                value: !include examples/sectionInUseErrors.sample

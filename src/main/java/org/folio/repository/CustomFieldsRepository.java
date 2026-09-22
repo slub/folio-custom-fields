@@ -1,5 +1,6 @@
 package org.folio.repository;
 
+import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 
@@ -67,6 +68,15 @@ public interface CustomFieldsRepository {
    * @param tenantId - tenant id
    */
   Future<CustomFieldCollection> findByQuery(String query, int offset, int limit, String tenantId);
+
+  /**
+   * Fetches all custom field definitions assigned to the given section, sorted by order.
+   *
+   * @param sectionId  - id of the custom field section
+   * @param tenantId   - tenant id
+   * @param connection - {@link Conn} to use
+   */
+  Future<List<CustomField>> findBySectionId(String sectionId, String tenantId, @Nonnull Conn connection);
 
   /**
    * Updates custom field definition.

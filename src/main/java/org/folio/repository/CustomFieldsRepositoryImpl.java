@@ -1,12 +1,15 @@
 package org.folio.repository;
 
 import static org.folio.repository.CustomFieldsConstants.CUSTOM_FIELDS_TABLE;
+import static org.folio.repository.CustomFieldsConstants.JSONB_COLUMN;
 import static org.folio.repository.CustomFieldsConstants.MAX_ORDER_COLUMN;
 import static org.folio.repository.CustomFieldsConstants.REF_ID_REGEX;
+import static org.folio.repository.CustomFieldsConstants.SELECT_BY_SECTION_ID;
 import static org.folio.repository.CustomFieldsConstants.SELECT_MAX_ORDER;
 import static org.folio.repository.CustomFieldsConstants.SELECT_REF_IDS;
 import static org.folio.repository.CustomFieldsConstants.VALUES_COLUMN;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.Nonnull;
@@ -27,6 +30,7 @@ import org.springframework.stereotype.Component;
 
 import org.folio.db.CqlQuery;
 import org.folio.db.RowSetUtils;
+import org.folio.dbschema.ObjectMapperTool;
 import org.folio.db.exc.translation.DBExceptionTranslator;
 import org.folio.rest.jaxrs.model.CustomField;
 import org.folio.rest.jaxrs.model.CustomFieldCollection;
@@ -104,6 +108,15 @@ public class CustomFieldsRepositoryImpl implements CustomFieldsRepository {
   }
 
   @Override
+  public Future<List<CustomField>> findBySectionId(String sectionId, String tenantId, @Nonnull Conn connection) {
+    log.debug("Getting custom fields by section id: {}.", sectionId);
+    String query = String.format(SELECT_BY_SECTION_ID, getCFTableName(tenantId));
+    return connection.execute(query, Tuple.of(sectionId))
+      .map(this::mapCustomFields)
+      .recover(excTranslator.translateOrPassBy());
+  }
+
+  @Override
   public Future<Boolean> update(CustomField entity, String tenantId) {
     return pgClient(tenantId).withConn(conn -> update(entity, conn));
   }
@@ -141,6 +154,11 @@ public class CustomFieldsRepositoryImpl implements CustomFieldsRepository {
       .filter(StringUtils::isNotBlank)
       .mapToInt(Integer::parseInt)
       .max().orElse(0);
+  }
+
+  private List<CustomField> mapCustomFields(RowSet<Row> rowSet) {
+    return RowSetUtils.mapItems(rowSet,
+      row -> ObjectMapperTool.readValue(row.getJsonObject(JSONB_COLUMN).encode(), CustomField.class));
   }
 
   private Integer mapMaxOrder(Row result) {

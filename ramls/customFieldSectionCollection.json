@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "description": "Collection of custom field sections",
+  "additionalProperties": false,
+  "properties": {
+    "customFieldSections": {
+      "type": "array",
+      "description": "An array of custom field sections",
+      "items": {
+        "type": "object",
+        "$ref": "customFieldSection.json"
+      }
+    },
+    "totalRecords": {
+      "description": "Total number of records available, that match search conditions",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "customFieldSections",
+    "totalRecords"
+  ]
+}

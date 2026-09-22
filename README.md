@@ -93,6 +93,44 @@ Please note that indicated module version and ModuleDescriptor.json file serve i
    ~~~~ 
   The permission name inside of the `permissionsRequired` section can be modified to represent the module purpose.
   See [mod-users](https://github.com/folio-org/mod-users/pull/136/files) as an example of `folio-custom-fields` integration.
+  4. Since `custom-fields` interface version 3.2 (folio-custom-fields 4.0.0): custom field sections.
+  Add the `create_custom_field_sections_table.sql` snippet to the `scripts` section of schema.json, with the host
+  module's own next version as `fromModuleVersion`, so that it also runs for existing tenants on upgrade:
+  ~~~~
+  {
+    "run": "after",
+    "snippetPath": "create_custom_field_sections_table.sql",
+    "fromModuleVersion": "<host-module-name>-<next-version>"
+  }
+  ~~~~
+  Add the handlers for `GET`/`POST` `/custom-field-sections` and `GET`/`PUT`/`DELETE` `/custom-field-sections/{id}`
+  to the `custom-fields` interface in the ModuleDescriptor, with (host-prefixed) permissions for them, see
+  [ModuleDescriptor-template.json](descriptors/ModuleDescriptor-template.json).
+  Without the snippet, calls to the section endpoints and saving a custom field with a `sectionId` fail with
+  `relation "custom_field_sections" does not exist`.
+
+## Custom field sections
+
+A custom field section (`id`, `name`, `entityType`) groups the custom fields of one entity type. A custom field is
+assigned to a section with its optional `sectionId`:
+
+* The section must exist and must have the same `entityType` as the custom field, otherwise saving the field fails with 422.
+* The section `name` is unique per `entityType` (case-insensitive).
+* A section belongs to exactly one `entityType`; fields of different entity types cannot share a section.
+
+### Deleting a section
+
+A section that is still assigned to at least one custom field **cannot be deleted**, and its `entityType` cannot be
+changed. Removing a section is a manual process, nothing is moved or unassigned automatically:
+
+1. Find the custom fields assigned to the section: `GET /custom-fields?query=sectionId==<id>`.
+2. Assign each of them to another section, or remove its `sectionId` (`PUT /custom-fields/{id}` or `PUT /custom-fields`).
+3. Delete the section, which is now empty: `DELETE /custom-field-sections/{id}` → 204.
+
+If the section is still assigned, `DELETE` responds with 422, code `sectionInUse`, and lists the assigned
+custom fields as parameters (`key` = field id, `value` = field name). The section and the custom fields are unchanged.
+The check runs in a transaction that locks the section row, so a custom field can't be assigned to the section while
+it is being deleted.
 
 ## RecordService
 

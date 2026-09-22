@@ -9,6 +9,7 @@ import static org.folio.rest.exc.RestExceptionHandlers.generalHandler;
 import static org.folio.rest.exc.RestExceptionHandlers.logged;
 import static org.folio.rest.exceptions.CustomFieldExceptionHandlers.invalidOrderHandler;
 import static org.folio.rest.exceptions.CustomFieldExceptionHandlers.invalidValueHandler;
+import static org.folio.rest.exceptions.CustomFieldExceptionHandlers.sectionInUseHandler;
 
 import java.util.ServiceLoader;
 import java.util.stream.StreamSupport;
@@ -48,6 +49,7 @@ public class ApplicationConfig {
       .orElse(baseUnauthorizedHandler())
       .orElse(invalidValueHandler())
       .orElse(invalidOrderHandler())
+      .orElse(sectionInUseHandler())
       .orElse(baseUnprocessableHandler())
       .orElse(generalHandler())
       .compose(completionCause()));

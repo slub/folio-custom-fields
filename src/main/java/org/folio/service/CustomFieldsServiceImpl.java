@@ -52,6 +52,7 @@ import org.z3950.zing.cql.ModifierSet;
 
 import org.folio.common.OkapiParams;
 import org.folio.model.RecordUpdate;
+import org.folio.repository.CustomFieldSectionsRepository;
 import org.folio.repository.CustomFieldsRepository;
 import org.folio.rest.jaxrs.model.CustomField;
 import org.folio.rest.jaxrs.model.CustomFieldCollection;
@@ -81,9 +82,15 @@ public class CustomFieldsServiceImpl implements CustomFieldsService {
   private static final String MISSED_OPTION_MESSAGE = "Option with id '%s' not found in custom field '%s'";
   private static final String FORMAT_CHANGING_MESSAGE =
     "The format of the custom field can not be changed: newFormat = %s, oldFormat = %s";
+  private static final String SECTION_ID_ATTRIBUTE = "sectionId";
+  private static final String SECTION_NOT_FOUND_MESSAGE = "Custom field section with id '%s' not found";
+  private static final String SECTION_ENTITY_TYPE_MESSAGE =
+    "Custom field section '%s' belongs to entityType '%s', but the custom field has entityType '%s'";
 
   @Autowired
   private CustomFieldsRepository repository;
+  @Autowired
+  private CustomFieldSectionsRepository sectionsRepository;
   @Autowired
   private UserService userService;
   @Autowired
@@ -99,9 +106,10 @@ public class CustomFieldsServiceImpl implements CustomFieldsService {
     return repository.maxOrder(params.getTenant())
       .compose(maxOrder -> {
         customField.setOrder(maxOrder + 1);
-        return save(customField, params,
-                (unAccentName, tenantId) -> repository.maxRefId(unAccentName, params.getTenant()),
-                (customField1, tenantId) -> repository.save(customField1, params.getTenant()));
+        return pgClient(params.getTenant()).withTrans(conn -> validateSection(customField, params.getTenant(), conn)
+          .compose(v -> save(customField, params,
+                (unAccentName, tenantId) -> repository.maxRefId(unAccentName, params.getTenant(), conn),
+                (customField1, tenantId) -> repository.save(customField1, conn))));
       });
   }
 
@@ -114,8 +122,9 @@ public class CustomFieldsServiceImpl implements CustomFieldsService {
       .compose(oldCustomField -> {
         customField.setId(oldCustomField.getId());
         customField.setOrder(oldCustomField.getOrder());
-        return update(customField, oldCustomField, params,
-                (customFieldEntity, tenantId) -> repository.update(customFieldEntity, tenantId));
+        return pgClient(params.getTenant()).withTrans(conn -> validateSection(customField, params.getTenant(), conn)
+          .compose(v -> update(customField, oldCustomField, params,
+                (customFieldEntity, tenantId) -> repository.update(customFieldEntity, conn))));
       });
   }
 
@@ -167,11 +176,49 @@ public class CustomFieldsServiceImpl implements CustomFieldsService {
         Set<String> fieldsToInsert = Sets.difference(newFieldsMap.keySet(), existingFieldsMap.keySet());
         PostgresClient postgresClient = PostgresClient.getInstance(vertx, params.getTenant());
 
-        return postgresClient.withTrans(connection -> removeFields(connection, fieldsToRemove)
+        return postgresClient.withTrans(connection -> validateSections(customFields, params.getTenant(), connection)
+                .compose(x -> removeFields(connection, fieldsToRemove))
                 .compose(x -> updateFields(params, connection, fieldsToUpdate, newFieldsMap, existingFieldsMap))
                 .compose(x -> insertFields(params, connection, fieldsToInsert, newFieldsMap))
                 .compose(unused -> removeValues(params, connection, fieldsToRemove, existingFieldsMap)))
                 .map(customFields);
+      });
+  }
+
+  /**
+   * Validates the sectionId of each distinct section referenced by the given fields.
+   */
+  private Future<Void> validateSections(List<CustomField> customFields, String tenantId, Conn connection) {
+    Collection<CustomField> oneFieldPerSection = customFields.stream()
+      .filter(field -> field.getSectionId() != null)
+      .collect(Collectors.toMap(CustomField::getSectionId, Function.identity(), (first, second) -> first))
+      .values();
+    return executeForEach(oneFieldPerSection, field -> validateSection(field, tenantId, connection));
+  }
+
+  /**
+   * Validates that the section the field is assigned to exists and has the field's entityType.
+   * The section row is locked with FOR SHARE until the transaction ends, so a concurrent section delete
+   * (FOR UPDATE) waits and then sees this field as assigned. No field can end up in a deleted section.
+   */
+  private Future<Void> validateSection(CustomField customField, String tenantId, Conn connection) {
+    String sectionId = customField.getSectionId();
+    if (sectionId == null) {
+      return succeededFuture();
+    }
+    return sectionsRepository.findByIdForShare(sectionId, tenantId, connection)
+      .compose(section -> {
+        if (section.isEmpty()) {
+          return failedFuture(new InvalidFieldValueException(SECTION_ID_ATTRIBUTE, sectionId,
+            format(SECTION_NOT_FOUND_MESSAGE, sectionId)));
+        }
+        String sectionEntityType = section.get().getEntityType();
+        if (!Objects.equals(sectionEntityType, customField.getEntityType())) {
+          return failedFuture(new InvalidFieldValueException(SECTION_ID_ATTRIBUTE, sectionId,
+            format(SECTION_ENTITY_TYPE_MESSAGE, section.get().getName(), sectionEntityType,
+              customField.getEntityType())));
+        }
+        return succeededFuture();
       });
   }
 
@@ -425,6 +472,10 @@ public class CustomFieldsServiceImpl implements CustomFieldsService {
       }
       return null;
     });
+  }
+
+  private PostgresClient pgClient(String tenantId) {
+    return PostgresClient.getInstance(vertx, tenantId);
   }
 
   private String unAccentName(String customFieldName) {

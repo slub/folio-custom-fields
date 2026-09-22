@@ -1,0 +1,15 @@
+{
+  "errors": [
+    {
+      "message": "Section 'Vendor information' cannot be deleted: it is used by 1 custom field(s). Move or unassign them first.",
+      "type": "1",
+      "code": "sectionInUse",
+      "parameters": [
+        {
+          "key": "62d00c36-a94f-434d-9cd2-c7ea159303da",
+          "value": "Department"
+        }
+      ]
+    }
+  ]
+}

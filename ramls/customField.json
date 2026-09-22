@@ -81,6 +81,11 @@
       "description": "Lookup field properties",
       "$ref": "lookupField.json"
     },
+    "sectionId": {
+      "type": "string",
+      "description": "Id of the custom field section the field is displayed in. The section must have the same entityType as the field",
+      "$ref": "raml-util/schemas/uuid.schema"
+    },
     "displayInAccordion": {
       "type": "string",
       "description": "Display in accordion names for the custom field"

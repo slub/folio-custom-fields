@@ -51,6 +51,31 @@
           "methods": ["GET"],
           "pathPattern": "/custom-fields/{id}/options/{optId}/stats",
           "permissionsRequired": ["custom.fields.item.option.stats.get"]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/custom-field-sections",
+          "permissionsRequired": ["custom.fields.sections.collection.get"]
+        },
+        {
+          "methods": ["POST"],
+          "pathPattern": "/custom-field-sections",
+          "permissionsRequired": ["custom.fields.sections.item.post"]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/custom-field-sections/{id}",
+          "permissionsRequired": ["custom.fields.sections.item.get"]
+        },
+        {
+          "methods": ["PUT"],
+          "pathPattern": "/custom-field-sections/{id}",
+          "permissionsRequired": ["custom.fields.sections.item.put"]
+        },
+        {
+          "methods": ["DELETE"],
+          "pathPattern": "/custom-field-sections/{id}",
+          "permissionsRequired": ["custom.fields.sections.item.delete"]
         }
       ]
     },
@@ -117,6 +142,31 @@
       "description": "Get Custom Field Option Statistic"
     },
     {
+      "permissionName": "custom.fields.sections.collection.get",
+      "displayName": "Custom Fields - get section collection",
+      "description": "Get Custom Field Sections collection"
+    },
+    {
+      "permissionName": "custom.fields.sections.item.post",
+      "displayName": "Custom Fields - create section",
+      "description": "Create Custom Field Section"
+    },
+    {
+      "permissionName": "custom.fields.sections.item.get",
+      "displayName": "Custom Fields - get section",
+      "description": "Get Custom Field Section"
+    },
+    {
+      "permissionName": "custom.fields.sections.item.put",
+      "displayName": "Custom Fields - modify section",
+      "description": "Modify Custom Field Section"
+    },
+    {
+      "permissionName": "custom.fields.sections.item.delete",
+      "displayName": "Custom Fields - delete section",
+      "description": "Delete Custom Field Section"
+    },
+    {
       "permissionName": "custom.fields.all",
       "displayName": "Custom Fields module - all permissions",
       "description": "Entire set of permissions needed to use the custom fields module",
@@ -128,7 +178,12 @@
         "custom.fields.item.put",
         "custom.fields.item.delete",
         "custom.fields.item.stats.get",
-        "custom.fields.item.option.stats.get"
+        "custom.fields.item.option.stats.get",
+        "custom.fields.sections.collection.get",
+        "custom.fields.sections.item.post",
+        "custom.fields.sections.item.get",
+        "custom.fields.sections.item.put",
+        "custom.fields.sections.item.delete"
       ],
       "visible": false
     }

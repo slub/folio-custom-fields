@@ -15,6 +15,8 @@ import static org.folio.CustomFieldsTestUtil.USER2_ID;
 import static org.folio.CustomFieldsTestUtil.USER3_ID;
 import static org.folio.CustomFieldsTestUtil.USER4_ID;
 import static org.folio.CustomFieldsTestUtil.USER5_ID;
+import static org.folio.CustomFieldsTestUtil.CUSTOM_FIELD_SECTIONS_PATH;
+import static org.folio.CustomFieldsTestUtil.deleteAllCustomFieldSections;
 import static org.folio.CustomFieldsTestUtil.deleteAllCustomFields;
 import static org.folio.CustomFieldsTestUtil.getAllCustomFields;
 import static org.folio.CustomFieldsTestUtil.itemOptionStatResourcePath;
@@ -48,6 +50,7 @@ import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.rest.jaxrs.model.CustomField;
 import org.folio.rest.jaxrs.model.CustomFieldCollection;
 import org.folio.rest.jaxrs.model.CustomFieldOptionStatistic;
+import org.folio.rest.jaxrs.model.CustomFieldSection;
 import org.folio.rest.jaxrs.model.CustomFieldStatistic;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Metadata;
@@ -68,6 +71,7 @@ public class CustomFieldsImplTest extends TestBase {
   @Before
   public void setUp() throws IOException, URISyntaxException {
     deleteAllCustomFields(vertx);
+    deleteAllCustomFieldSections(vertx);
     mockUserRequests();
   }
 
@@ -799,6 +803,101 @@ public class CustomFieldsImplTest extends TestBase {
   private void createFieldsMultipleEntityTypes() throws IOException, URISyntaxException {
     createCustomField(readFile("fields/post/postCustomField.json"));
     createCustomField(readFile("fields/post/postCustomField-package.json"));
+  }
+
+  @Test
+  public void postCustomFieldWithSectionOfSameEntityType() throws IOException, URISyntaxException {
+    CustomFieldSection section = createSection("Contact", "user");
+    CustomField field = readJsonFile("fields/post/postCustomField.json", CustomField.class)
+      .withSectionId(section.getId());
+
+    CustomField created = createCustomField(Json.encode(field));
+
+    assertEquals(section.getId(), created.getSectionId());
+    assertEquals(section.getId(), getAllCustomFields(vertx).get(0).getSectionId());
+  }
+
+  @Test
+  public void postCustomFieldShouldReturn422WhenSectionNotFound() throws IOException, URISyntaxException {
+    CustomField field = readJsonFile("fields/post/postCustomField.json", CustomField.class)
+      .withSectionId(STUB_FIELD_ID);
+
+    String error = postWithStatus(CUSTOM_FIELDS_PATH, Json.encode(field), SC_UNPROCESSABLE_ENTITY, USER1_HEADER)
+      .asString();
+
+    assertThat(error, containsString("Custom field section with id '" + STUB_FIELD_ID + "' not found"));
+    assertTrue(getAllCustomFields(vertx).isEmpty());
+  }
+
+  @Test
+  public void postCustomFieldShouldReturn422WhenSectionHasOtherEntityType() throws IOException, URISyntaxException {
+    CustomFieldSection section = createSection("Package info", "package");
+    CustomField field = readJsonFile("fields/post/postCustomField.json", CustomField.class)
+      .withSectionId(section.getId());
+
+    String error = postWithStatus(CUSTOM_FIELDS_PATH, Json.encode(field), SC_UNPROCESSABLE_ENTITY, USER1_HEADER)
+      .asString();
+
+    assertThat(error, containsString("belongs to entityType 'package', but the custom field has entityType 'user'"));
+  }
+
+  @Test
+  public void putCustomFieldShouldAssignAndUnassignSection() throws IOException, URISyntaxException {
+    CustomFieldSection section = createSection("Contact", "user");
+    CustomField created = createCustomField(readFile("fields/post/postCustomField.json"));
+
+    putWithNoContent(itemResourcePath(created.getId()), Json.encode(created.withSectionId(section.getId())), USER1_HEADER);
+    assertEquals(section.getId(), getAllCustomFields(vertx).get(0).getSectionId());
+
+    putWithNoContent(itemResourcePath(created.getId()), Json.encode(created.withSectionId(null)), USER1_HEADER);
+    assertEquals(null, getAllCustomFields(vertx).get(0).getSectionId());
+  }
+
+  @Test
+  public void putCustomFieldShouldReturn422WhenSectionNotFound() throws IOException, URISyntaxException {
+    CustomField created = createCustomField(readFile("fields/post/postCustomField.json"));
+
+    String error = putWithStatus(itemResourcePath(created.getId()),
+      Json.encode(created.withSectionId(STUB_FIELD_ID)), SC_UNPROCESSABLE_ENTITY, USER1_HEADER).asString();
+
+    assertThat(error, containsString("Custom field section with id '" + STUB_FIELD_ID + "' not found"));
+    assertEquals(null, getAllCustomFields(vertx).get(0).getSectionId());
+  }
+
+  @Test
+  public void putCustomFieldCollectionShouldValidateSections() throws IOException, URISyntaxException {
+    CustomFieldSection section = createSection("Contact", "user");
+    PutCustomFieldCollection request =
+      readJsonFile("fields/put/putCustomFieldCollection.json", PutCustomFieldCollection.class);
+    request.getCustomFields().forEach(field -> field.setSectionId(section.getId()));
+
+    putWithNoContent(CUSTOM_FIELDS_PATH, Json.encode(request), USER1_HEADER);
+
+    List<CustomField> fields = getAllCustomFields(vertx);
+    assertThat(fields, hasSize(2));
+    fields.forEach(field -> assertEquals(section.getId(), field.getSectionId()));
+  }
+
+  @Test
+  public void putCustomFieldCollectionShouldReturn422WhenSectionNotFound() throws IOException, URISyntaxException {
+    createCustomField(readFile("fields/post/postCustomField.json"));
+    PutCustomFieldCollection request =
+      readJsonFile("fields/put/putCustomFieldCollection.json", PutCustomFieldCollection.class);
+    request.getCustomFields().get(1).setSectionId(STUB_FIELD_ID);
+
+    String error = putWithStatus(CUSTOM_FIELDS_PATH, Json.encode(request), SC_UNPROCESSABLE_ENTITY, USER1_HEADER)
+      .asString();
+
+    assertThat(error, containsString("Custom field section with id '" + STUB_FIELD_ID + "' not found"));
+    List<CustomField> fields = getAllCustomFields(vertx);
+    assertThat(fields, hasSize(1));
+    assertEquals("Department", fields.get(0).getName());
+  }
+
+  private CustomFieldSection createSection(String name, String entityType) {
+    CustomFieldSection section = new CustomFieldSection().withName(name).withEntityType(entityType);
+    return postWithStatus(CUSTOM_FIELD_SECTIONS_PATH, Json.encode(section), SC_CREATED, USER1_HEADER)
+      .as(CustomFieldSection.class);
   }
 
   private CustomField createCustomField(String postBody) {
