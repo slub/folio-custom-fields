@@ -3,12 +3,14 @@
     {
       "id": "8f8b5a6e-1c3d-4c3e-9d3a-0b0b3a1f6c11",
       "name": "Vendor information",
-      "entityType": "package"
+      "entityType": "package",
+      "order": 1
     },
     {
       "id": "2b7c1d0e-5f4a-4b3c-8d2e-1a0f9e8d7c6b",
       "name": "Contact",
-      "entityType": "user"
+      "entityType": "user",
+      "order": 1
     }
   ],
   "totalRecords": 2

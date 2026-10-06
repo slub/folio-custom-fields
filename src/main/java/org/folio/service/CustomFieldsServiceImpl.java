@@ -7,12 +7,12 @@ import static java.util.Comparator.comparing;
 import static java.util.Comparator.naturalOrder;
 import static java.util.Comparator.reverseOrder;
 
+import static org.folio.service.CqlSortUtils.withSortByOrder;
 import static org.folio.service.CustomFieldUtils.extractDefaultOptionIds;
 import static org.folio.service.CustomFieldUtils.extractOptionIds;
 import static org.folio.service.CustomFieldUtils.isSelectableCustomFieldType;
 import static org.folio.service.CustomFieldUtils.isTextBoxCustomFieldType;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
 import java.util.Base64;
@@ -43,12 +43,6 @@ import org.folio.rest.persist.Conn;
 import org.folio.rest.persist.PostgresClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.z3950.zing.cql.CQLDefaultNodeVisitor;
-import org.z3950.zing.cql.CQLNode;
-import org.z3950.zing.cql.CQLParseException;
-import org.z3950.zing.cql.CQLParser;
-import org.z3950.zing.cql.CQLSortNode;
-import org.z3950.zing.cql.ModifierSet;
 
 import org.folio.common.OkapiParams;
 import org.folio.model.RecordUpdate;
@@ -69,10 +63,7 @@ import org.folio.service.exc.ServiceExceptions;
 @Component
 public class CustomFieldsServiceImpl implements CustomFieldsService {
 
-  private static final String ALL_RECORDS_QUERY = "cql.allRecords=1";
-
   private static final String FORMAT_ATTRIBUTE = "fieldFormat";
-  private static final String ORDER_ATTRIBUTE = "order/number";
   private static final String TYPE_ATTRIBUTE = "type";
 
   private static final String TYPE_CHANGING_MESSAGE =
@@ -495,36 +486,6 @@ public class CustomFieldsServiceImpl implements CustomFieldsService {
     return id + (maxRefId < 1 ? "" : "_" + (maxRefId + 1));
   }
 
-  /**
-   * Adds "sortby order" part to cqlQuery, if query already has "sortby" part, then "order"
-   * is added as second sort attribute
-   *
-   * @param cqlQuery initial query
-   * @return query with "sortby order"
-   */
-  private String withSortByOrder(String cqlQuery) {
-    log.debug("withSortByOrder:: Attempts to sort custom fields query.");
-
-    try {
-      final CQLParser parser = new CQLParser(CQLParser.V1POINT2);
-      CQLNode node = parser.parse(!StringUtils.isBlank(cqlQuery) ? cqlQuery : ALL_RECORDS_QUERY);
-      SortVisitor visitor = new SortVisitor();
-      node.traverse(visitor);
-      CQLSortNode foundSortNode = visitor.getCqlSortNode();
-      if (foundSortNode != null) {
-        foundSortNode.addSortIndex(new ModifierSet(ORDER_ATTRIBUTE));
-        return node.toCQL();
-      } else {
-        CQLSortNode newSortNode = new CQLSortNode(node);
-        newSortNode.addSortIndex(new ModifierSet(ORDER_ATTRIBUTE));
-        return newSortNode.toCQL();
-      }
-    } catch (CQLParseException | IOException e) {
-      log.warn("Unsupported Query Format : Search query is in an unsupported format.");
-      throw new IllegalArgumentException(e);
-    }
-  }
-
   private CustomFieldCollection sortByOrder(CustomFieldCollection collection) {
     collection.getCustomFields().sort(Comparator.comparingInt(CustomField::getOrder));
     return collection;
@@ -542,20 +503,6 @@ public class CustomFieldsServiceImpl implements CustomFieldsService {
       if (StringUtils.isBlank(value.getId())) {
         value.setId("opt_" + ++maxOptionIdIndex);
       }
-    }
-  }
-
-  private static class SortVisitor extends CQLDefaultNodeVisitor {
-
-    private CQLSortNode cqlSortNode;
-
-    @Override
-    public void onSortNode(CQLSortNode cqlSortNode) {
-      this.cqlSortNode = cqlSortNode;
-    }
-
-    public CQLSortNode getCqlSortNode() {
-      return cqlSortNode;
     }
   }
 }

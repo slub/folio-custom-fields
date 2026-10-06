@@ -5,7 +5,11 @@ import static org.folio.rest.jaxrs.resource.CustomFieldSections.PostCustomFieldS
 import static org.folio.rest.jaxrs.resource.CustomFieldSections.PostCustomFieldSectionsResponse.respond201WithApplicationJson;
 import static org.folio.rest.tools.utils.TenantTool.tenantId;
 
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
 
 import javax.ws.rs.core.Response;
 
@@ -23,6 +27,7 @@ import org.folio.rest.annotations.Validate;
 import org.folio.rest.aspect.HandleValidationErrors;
 import org.folio.rest.jaxrs.model.CustomFieldSection;
 import org.folio.rest.jaxrs.model.CustomFieldSectionCollection;
+import org.folio.rest.jaxrs.model.PutCustomFieldSectionCollection;
 import org.folio.rest.jaxrs.resource.CustomFieldSections;
 import org.folio.service.CustomFieldSectionsService;
 import org.folio.spring.SpringContextUtil;
@@ -52,6 +57,19 @@ public class CustomFieldSectionsImpl implements CustomFieldSections {
     sectionValidator.validate(entity);
     Future<CustomFieldSection> saved = sectionsService.save(entity, tenantId(okapiHeaders));
     respond(saved, section -> respond201WithApplicationJson(section, headersFor201()), asyncResultHandler, excHandler);
+  }
+
+  @Override
+  @Validate
+  @HandleValidationErrors
+  public void putCustomFieldSections(String xOkapiModuleId, PutCustomFieldSectionCollection entity,
+                                     Map<String, String> okapiHeaders,
+                                     Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    List<CustomFieldSection> sections = entity.getCustomFieldSections();
+    sections.forEach(sectionValidator::validate);
+    validatePutCustomFieldSectionCollection(entity);
+    Future<Void> replaced = sectionsService.replaceAll(sections, entity.getEntityType(), tenantId(okapiHeaders));
+    respond(replaced, v -> PutCustomFieldSectionsResponse.respond204(), asyncResultHandler, excHandler);
   }
 
   @Override
@@ -98,5 +116,31 @@ public class CustomFieldSectionsImpl implements CustomFieldSections {
                                             Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     Future<Void> deleted = sectionsService.delete(id, tenantId(okapiHeaders));
     respond(deleted, v -> DeleteCustomFieldSectionsByIdResponse.respond204(), asyncResultHandler, excHandler);
+  }
+
+  private void validatePutCustomFieldSectionCollection(PutCustomFieldSectionCollection collection) {
+    List<CustomFieldSection> sections = collection.getCustomFieldSections();
+    sections.stream()
+      .filter(section -> !section.getEntityType().equals(collection.getEntityType()))
+      .findFirst()
+      .ifPresent(section -> {
+        throw new IllegalArgumentException(String.format(
+          "Collection entityType '%s' does not match entityType '%s' of section '%s'",
+          collection.getEntityType(), section.getEntityType(), section.getName()));
+      });
+    failOnDuplicate(sections, CustomFieldSection::getId, "id");
+    failOnDuplicate(sections, section -> section.getName().toLowerCase(Locale.ROOT), "name");
+  }
+
+  private void failOnDuplicate(List<CustomFieldSection> sections, Function<CustomFieldSection, String> attribute,
+                               String attributeName) {
+    List<String> values = sections.stream().map(attribute).filter(Objects::nonNull).toList();
+    values.stream()
+      .filter(value -> values.indexOf(value) != values.lastIndexOf(value))
+      .findFirst()
+      .ifPresent(value -> {
+        throw new IllegalArgumentException(
+          String.format("Duplicate section %s '%s' in the collection", attributeName, value));
+      });
   }
 }
