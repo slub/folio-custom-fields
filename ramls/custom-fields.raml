@@ -24,6 +24,7 @@ types:
   customFieldOptionStatistic: !include customFieldOptionStatistic.json
   customFieldSection: !include customFieldSection.json
   customFieldSectionCollection: !include customFieldSectionCollection.json
+  putCustomFieldSectionCollection: !include putCustomFieldSectionCollection.json
   errors: !include raml-util/schemas/errors.schema
 
 traits:
@@ -171,9 +172,46 @@ resourceTypes:
   is: [ xOkapiModuleId ]
   post:
     is: [ validate ]
+    description: |
+      Create a custom field section. It is appended after the last section of its entity type (order = highest order + 1).
+  put:
+    is: [ validate ]
+    description: |
+      Replace all custom field sections of the entity type: the order of each section is set to its position in the list,
+      sections not mentioned in the request are deleted. Fails with 422 sectionInUse if a section to delete is still
+      assigned to custom fields.
+    body:
+      application/json:
+        type: putCustomFieldSectionCollection
+        example:
+          strict: false
+          value: !include examples/putCustomFieldSectionCollection.sample
+    responses:
+      204:
+        description: "All custom field sections of the entity type successfully replaced"
+      400:
+        description: "Bad request, e.g. malformed request body or query parameter"
+        body:
+          text/plain:
+            example: "unable to update /custom-field-sections -- malformed JSON at 13:4"
+      422:
+        description: |
+          Validation error, e.g. duplicate name or id, a section of another entityType, or a section to delete is
+          still assigned to custom fields (code sectionInUse)
+        body:
+          application/json:
+            type: errors
+            example:
+              strict: false
+              value: !include examples/sectionInUseErrors.sample
+      500:
+        description: "Internal server error"
+        body:
+          text/plain:
+            example: "internal server error, contact administrator"
   get:
     is: [
-      searchable: {description: "Query should contain custom field section attributes", example: "entityType==package"},
+      searchable: {description: "Query should contain custom field section attributes, results are sorted by order", example: "entityType==package"},
       pageable,
       validate
     ]

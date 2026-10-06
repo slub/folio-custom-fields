@@ -1,5 +1,6 @@
 package org.folio.repository;
 
+import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 
@@ -15,10 +16,10 @@ public interface CustomFieldSectionsRepository {
    * Saves the custom field section. Generates the id if it is missing.
    * Returns the saved section.
    *
-   * @param entity   - {@link CustomFieldSection} to save
-   * @param tenantId - tenant id
+   * @param entity     - {@link CustomFieldSection} to save
+   * @param connection - {@link Conn} to use
    */
-  Future<CustomFieldSection> save(CustomFieldSection entity, String tenantId);
+  Future<CustomFieldSection> save(CustomFieldSection entity, @Nonnull Conn connection);
 
   /**
    * Fetches the custom field section with the given id.
@@ -59,6 +60,18 @@ public interface CustomFieldSectionsRepository {
    * @param tenantId - tenant id
    */
   Future<CustomFieldSectionCollection> findByQuery(String query, int offset, int limit, String tenantId);
+
+  /**
+   * Fetches all custom field sections of the given entity type, sorted by order, and locks their rows with
+   * {@code FOR UPDATE} until the transaction of the connection ends. Used whenever the order of the sections of
+   * an entity type is computed or changed, so concurrent changes can't produce conflicting orders.
+   *
+   * @param entityType - entity type of the sections
+   * @param tenantId   - tenant id
+   * @param connection - {@link Conn} of the running transaction
+   */
+  Future<List<CustomFieldSection>> findByEntityTypeForUpdate(String entityType, String tenantId,
+                                                             @Nonnull Conn connection);
 
   /**
    * Updates the custom field section. Returns false if no section with the entity's id exists.

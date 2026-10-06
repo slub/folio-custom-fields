@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "description": "Collection of all custom field sections of one entity type for PUT request",
+  "additionalProperties": false,
+  "properties": {
+    "customFieldSections": {
+      "type": "array",
+      "description": "All custom field sections of the entity type, in display order",
+      "items": {
+        "type": "object",
+        "$ref": "customFieldSection.json"
+      }
+    },
+    "entityType": {
+      "type": "string",
+      "description": "The entityType of the custom field sections"
+    }
+  },
+  "required": [
+    "customFieldSections",
+    "entityType"
+  ]
+}

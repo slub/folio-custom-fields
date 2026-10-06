@@ -103,7 +103,7 @@ Please note that indicated module version and ModuleDescriptor.json file serve i
     "fromModuleVersion": "<host-module-name>-<next-version>"
   }
   ~~~~
-  Add the handlers for `GET`/`POST` `/custom-field-sections` and `GET`/`PUT`/`DELETE` `/custom-field-sections/{id}`
+  Add the handlers for `GET`/`POST`/`PUT` `/custom-field-sections` and `GET`/`PUT`/`DELETE` `/custom-field-sections/{id}`
   to the `custom-fields` interface in the ModuleDescriptor, with (host-prefixed) permissions for them, see
   [ModuleDescriptor-template.json](descriptors/ModuleDescriptor-template.json).
   Without the snippet, calls to the section endpoints and saving a custom field with a `sectionId` fail with
@@ -117,6 +117,18 @@ assigned to a section with its optional `sectionId`:
 * The section must exist and must have the same `entityType` as the custom field, otherwise saving the field fails with 422.
 * The section `name` is unique per `entityType` (case-insensitive).
 * A section belongs to exactly one `entityType`; fields of different entity types cannot share a section.
+
+A section has a read-only `order`, its display position within its `entityType`. It works like the `order` of
+custom fields, but is counted per `entityType`; a given `order` is ignored on `POST` and `PUT /custom-field-sections/{id}`:
+
+* `POST` appends the section after the last section of its `entityType` (highest `order` + 1).
+* `PUT /custom-field-sections/{id}` keeps the `order`. If the `entityType` changes, the section is appended to the new
+  `entityType` and the sections of the old one are renumbered.
+* `DELETE` renumbers the remaining sections of the `entityType` to 1..n.
+* `PUT /custom-field-sections` (body: `customFieldSections` + `entityType`) replaces all sections of the `entityType`:
+  the `order` is set to the position in the list, sections missing from the list are deleted (422 `sectionInUse` if a
+  custom field is still assigned to one of them), sections without `id` are created. Other entity types are unchanged.
+* `GET /custom-field-sections` sorts by `order`; if the query has its own `sortby`, `order` is added as last sort key.
 
 ### Deleting a section
 

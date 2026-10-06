@@ -16,6 +16,8 @@ public final class CustomFieldsConstants {
   public static final String SELECT_MAX_ORDER = "SELECT MAX((jsonb ->> 'order')::int) as " + MAX_ORDER_COLUMN + " FROM %s";
   public static final String SELECT_BY_SECTION_ID = "SELECT " + JSONB_COLUMN + " FROM %s WHERE "
     + JSONB_COLUMN + " ->> 'sectionId' = $1 ORDER BY (" + JSONB_COLUMN + " ->> 'order')::int";
+  public static final String SELECT_SECTIONS_BY_ENTITY_TYPE_FOR_UPDATE = "SELECT " + JSONB_COLUMN + " FROM %s WHERE "
+    + JSONB_COLUMN + " ->> 'entityType' = $1 ORDER BY (" + JSONB_COLUMN + " ->> 'order')::int FOR UPDATE";
   public static final String SELECT_SECTION_BY_ID_FOR_SHARE = "SELECT " + JSONB_COLUMN + " FROM %s WHERE "
     + ID_COLUMN + " = $1 FOR SHARE";
   public static final String SELECT_SECTION_BY_ID_FOR_UPDATE = "SELECT " + JSONB_COLUMN + " FROM %s WHERE "

@@ -63,6 +63,11 @@
           "permissionsRequired": ["custom.fields.sections.item.post"]
         },
         {
+          "methods": ["PUT"],
+          "pathPattern": "/custom-field-sections",
+          "permissionsRequired": ["custom.fields.sections.collection.put"]
+        },
+        {
           "methods": ["GET"],
           "pathPattern": "/custom-field-sections/{id}",
           "permissionsRequired": ["custom.fields.sections.item.get"]
@@ -147,6 +152,11 @@
       "description": "Get Custom Field Sections collection"
     },
     {
+      "permissionName": "custom.fields.sections.collection.put",
+      "displayName": "Custom Fields - replace section collection",
+      "description": "Replace all Custom Field Sections of an entity type, sets their order"
+    },
+    {
       "permissionName": "custom.fields.sections.item.post",
       "displayName": "Custom Fields - create section",
       "description": "Create Custom Field Section"
@@ -180,6 +190,7 @@
         "custom.fields.item.stats.get",
         "custom.fields.item.option.stats.get",
         "custom.fields.sections.collection.get",
+        "custom.fields.sections.collection.put",
         "custom.fields.sections.item.post",
         "custom.fields.sections.item.get",
         "custom.fields.sections.item.put",

@@ -19,6 +19,12 @@
       "type": "string",
       "description": "The entity type, the custom field section is assigned to",
       "example": "package"
+    },
+    "order": {
+      "type": "integer",
+      "description": "The display order of the section within its entity type, set by the server: new sections are appended, PUT /custom-field-sections sets the order of the given list",
+      "example": 1,
+      "readonly": true
     }
   },
   "required": [

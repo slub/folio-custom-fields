@@ -4,7 +4,9 @@ import static org.folio.repository.CustomFieldsConstants.CUSTOM_FIELD_SECTIONS_T
 import static org.folio.repository.CustomFieldsConstants.JSONB_COLUMN;
 import static org.folio.repository.CustomFieldsConstants.SELECT_SECTION_BY_ID_FOR_SHARE;
 import static org.folio.repository.CustomFieldsConstants.SELECT_SECTION_BY_ID_FOR_UPDATE;
+import static org.folio.repository.CustomFieldsConstants.SELECT_SECTIONS_BY_ENTITY_TYPE_FOR_UPDATE;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.Nonnull;
@@ -39,11 +41,11 @@ public class CustomFieldSectionsRepositoryImpl implements CustomFieldSectionsRep
   private DBExceptionTranslator excTranslator;
 
   @Override
-  public Future<CustomFieldSection> save(CustomFieldSection entity, String tenantId) {
+  public Future<CustomFieldSection> save(CustomFieldSection entity, @Nonnull Conn connection) {
     log.debug("Saving a custom field section with id: {}.", entity.getId());
 
     setIdIfMissing(entity);
-    return pgClient(tenantId).save(CUSTOM_FIELD_SECTIONS_TABLE, entity.getId(), entity)
+    return connection.save(CUSTOM_FIELD_SECTIONS_TABLE, entity.getId(), entity)
       .map(id -> {
         entity.setId(id);
         return entity;
@@ -80,6 +82,16 @@ public class CustomFieldSectionsRepositoryImpl implements CustomFieldSectionsRep
   }
 
   @Override
+  public Future<List<CustomFieldSection>> findByEntityTypeForUpdate(String entityType, String tenantId,
+                                                                    @Nonnull Conn connection) {
+    log.debug("Getting and update-locking custom field sections with entityType: {}.", entityType);
+    String query = String.format(SELECT_SECTIONS_BY_ENTITY_TYPE_FOR_UPDATE, getTableName(tenantId));
+    return connection.execute(query, Tuple.of(entityType))
+      .map(rowSet -> RowSetUtils.mapItems(rowSet, this::mapSection))
+      .recover(excTranslator.translateOrPassBy());
+  }
+
+  @Override
   public Future<Boolean> update(CustomFieldSection entity, @Nonnull Conn connection) {
     log.debug("Updating a custom field section with id: {}.", entity.getId());
     return connection.update(CUSTOM_FIELD_SECTIONS_TABLE, entity, entity.getId())
@@ -107,8 +119,11 @@ public class CustomFieldSectionsRepositoryImpl implements CustomFieldSectionsRep
     if (RowSetUtils.isEmpty(rowSet)) {
       return Optional.empty();
     }
-    return Optional.of(RowSetUtils.mapFirstItem(rowSet,
-      row -> ObjectMapperTool.readValue(row.getJsonObject(JSONB_COLUMN).encode(), CustomFieldSection.class)));
+    return Optional.of(RowSetUtils.mapFirstItem(rowSet, this::mapSection));
+  }
+
+  private CustomFieldSection mapSection(Row row) {
+    return ObjectMapperTool.readValue(row.getJsonObject(JSONB_COLUMN).encode(), CustomFieldSection.class);
   }
 
   private void setIdIfMissing(CustomFieldSection section) {
