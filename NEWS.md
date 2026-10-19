@@ -4,8 +4,8 @@
 * Provides `custom-fields v3.2`
 
 ### Features
-* Add `LOOKUP` custom field type storing the UUID of a record in another FOLIO app ([UXPROD-5934](https://folio-org.atlassian.net/browse/UXPROD-5934)). Values are validated for UUID shape only; existence and entity type of the referenced record are not verified (no referential integrity).
-* Add custom field sections: `/custom-field-sections` CRUD and optional `sectionId` on custom fields; a section has a read-only display `order` within its entity type, set by `PUT /custom-field-sections`; a section in use cannot be deleted ([FCFIELDS-95](https://issues.folio.org/browse/FCFIELDS-95))
+* Add `LOOKUP` custom field type storing the UUID of a record in another FOLIO app. ([FCFIELDS-90](https://folio-org.atlassian.net/browse/FCFIELDS-90))
+* Add custom field sections: `/custom-field-sections`
 
 ### Bug fixes
 * Update example for putCustomFieldCollection ([FCFIELDS-73](https://issues.folio.org/browse/FCFIELDS-73))
