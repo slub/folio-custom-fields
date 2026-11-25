@@ -106,8 +106,9 @@ Please note that indicated module version and ModuleDescriptor.json file serve i
   Add the handlers for `GET`/`POST`/`PUT` `/custom-field-sections` and `GET`/`PUT`/`DELETE` `/custom-field-sections/{id}`
   to the `custom-fields` interface in the ModuleDescriptor, with (host-prefixed) permissions for them, see
   [ModuleDescriptor-template.json](descriptors/ModuleDescriptor-template.json).
-  Without the snippet, calls to the section endpoints and saving a custom field with a `sectionId` fail with
-  `relation "custom_field_sections" does not exist`.
+  Without the snippet, the existing `/custom-fields` API keeps working. Calls to the section endpoints fail with
+  `relation "custom_field_sections" does not exist`, and saving a custom field with a `sectionId` returns 422
+  "Custom field sections are not enabled for this module".
 
 ## Custom field sections
 

@@ -44,6 +44,8 @@ import org.folio.rest.persist.PostgresClient;
 import org.springframework.stereotype.Component;
 
 import org.folio.common.OkapiParams;
+import org.folio.db.exc.DatabaseException;
+import org.folio.db.exc.translation.postgresql.PSQLState;
 import org.folio.model.RecordUpdate;
 import org.folio.repository.CustomFieldSectionsRepository;
 import org.folio.repository.CustomFieldsRepository;
@@ -76,6 +78,8 @@ public class CustomFieldsServiceImpl implements CustomFieldsService {
   private static final String SECTION_NOT_FOUND_MESSAGE = "Custom field section with id '%s' not found";
   private static final String SECTION_ENTITY_TYPE_MESSAGE =
     "Custom field section '%s' belongs to entityType '%s', but the custom field has entityType '%s'";
+  private static final String SECTIONS_NOT_ENABLED_MESSAGE =
+    "Custom field sections are not enabled for this module, the custom field can't have a sectionId";
 
   private final CustomFieldsRepository repository;
   private final CustomFieldSectionsRepository sectionsRepository;
@@ -199,6 +203,9 @@ public class CustomFieldsServiceImpl implements CustomFieldsService {
       return succeededFuture();
     }
     return sectionsRepository.findByIdForShare(sectionId, tenantId, connection)
+      .recover(e -> failedFuture(isUndefinedTable(e)
+        ? new InvalidFieldValueException(SECTION_ID_ATTRIBUTE, sectionId, SECTIONS_NOT_ENABLED_MESSAGE)
+        : e))
       .compose(section -> {
         if (section.isEmpty()) {
           return failedFuture(new InvalidFieldValueException(SECTION_ID_ATTRIBUTE, sectionId,
@@ -212,6 +219,14 @@ public class CustomFieldsServiceImpl implements CustomFieldsService {
         }
         return succeededFuture();
       });
+  }
+
+  /**
+   * A host module that has not added the {@code create_custom_field_sections_table.sql} snippet has no sections table.
+   */
+  private static boolean isUndefinedTable(Throwable e) {
+    return e instanceof DatabaseException dbException
+      && PSQLState.UNDEFINED_TABLE.getCode().equals(dbException.getSqlState());
   }
 
   private Future<Void> removeFields(Conn connection, Set<String> fieldsToRemove) {

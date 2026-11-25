@@ -1,5 +1,12 @@
 ## 4.0.0-SNAPSHOT In progress
 
+### Breaking changes
+* Custom field sections need the new `custom_field_sections` table. Host modules must add the
+  `create_custom_field_sections_table.sql` snippet to their `schema.json` and the `/custom-field-sections` handlers to
+  their ModuleDescriptor, see the README. Without the snippet the existing `/custom-fields` API keeps working; the
+  section endpoints fail, and saving a custom field with a `sectionId` returns 422 ("Custom field sections are not
+  enabled for this module"). ([FCFIELDS-95](https://folio-org.atlassian.net/browse/FCFIELDS-95))
+
 ### New APIs versions
 * Provides `custom-fields v3.2`
 
